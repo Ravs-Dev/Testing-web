@@ -1,6 +1,9 @@
-// Data Storage
-let documents = JSON.parse(localStorage.getItem('documents')) || [];
-let categories = JSON.parse(localStorage.getItem('categories')) || [
+// Variabel sementara sebagai fallback jika localStorage diblokir browser
+let sessionLoggedIn = false;
+
+// Data Storage (dengan try-catch agar tidak error di file://)
+let documents = [];
+let categories = [
     { id: 1, name: 'Surat Masuk' },
     { id: 2, name: 'Surat Keluar' },
     { id: 3, name: 'Laporan' },
@@ -8,7 +11,15 @@ let categories = JSON.parse(localStorage.getItem('categories')) || [
     { id: 5, name: 'Kepegawaian' },
     { id: 6, name: 'Lainnya' }
 ];
-let downloadCount = parseInt(localStorage.getItem('downloadCount')) || 0;
+let downloadCount = 0;
+
+try {
+    documents = JSON.parse(localStorage.getItem('documents')) || [];
+    categories = JSON.parse(localStorage.getItem('categories')) || categories;
+    downloadCount = parseInt(localStorage.getItem('downloadCount')) || 0;
+} catch (e) {
+    console.warn("localStorage diblokir browser. Menggunakan memori sementara.");
+}
 
 // Initialize
 document.addEventListener('DOMContentLoaded', function() {
@@ -20,50 +31,61 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ==========================================
-// LOGIN (DIPERBAIKI: Menggunakan .trim() agar spasi tidak mengganggu)
+// LOGIN (DIPERBAIKI: Anti-gagal & ada fallback)
 // ==========================================
 document.getElementById('loginForm').addEventListener('submit', function(e) {
-    e.preventDefault();
+    e.preventDefault(); // MENCEGAH HALAMAN RELOAD
     
-    // .trim() menghapus spasi di awal/akhir, .toLowerCase() mengubah ke huruf kecil
     const username = document.getElementById('loginUsername').value.trim().toLowerCase();
     const password = document.getElementById('loginPassword').value.trim();
 
-    console.log("Mencoba login dengan:", { username, password }); // Untuk debugging di Console
+    console.log("Mencoba login:", username, password);
 
     if (username === 'admin' && password === 'admin123') {
-        localStorage.setItem('isLoggedIn', 'true');
-        localStorage.setItem('username', 'Administrator');
-        showApp();
+        // Coba simpan ke localStorage, jika gagal gunakan variabel sementara
+        try {
+            localStorage.setItem('isLoggedIn', 'true');
+            localStorage.setItem('username', 'Administrator');
+        } catch (err) {
+            sessionLoggedIn = true; // Fallback jika localStorage diblokir
+            console.warn("Menggunakan mode sesi sementara (localStorage diblokir)");
+        }
+        
+        // PAKSA TAMPILAN BERUBAH
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('appContainer').classList.add('active');
+        document.getElementById('userName').textContent = 'Administrator';
+        
         showToast('Login berhasil! Selamat datang.', 'success');
     } else {
         showToast('Username atau password salah! (Gunakan: admin / admin123)', 'error');
-        document.getElementById('loginPassword').value = ''; // Reset password field
+        document.getElementById('loginPassword').value = ''; // Kosongkan password
+        document.getElementById('loginPassword').focus();
     }
 });
 
 function checkLogin() {
-    if (localStorage.getItem('isLoggedIn') === 'true') {
-        showApp();
+    let isLoggedIn = false;
+    try {
+        isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+    } catch (e) {
+        isLoggedIn = sessionLoggedIn;
     }
-}
 
-function showApp() {
-    const loginScreen = document.getElementById('loginScreen');
-    const appContainer = document.getElementById('appContainer');
-    
-    if (loginScreen) loginScreen.style.display = 'none';
-    if (appContainer) appContainer.classList.add('active');
-    
-    const username = localStorage.getItem('username') || 'Administrator';
-    const userNameEl = document.getElementById('userName');
-    if (userNameEl) userNameEl.textContent = username;
+    if (isLoggedIn) {
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('appContainer').classList.add('active');
+        document.getElementById('userName').textContent = localStorage.getItem('username') || 'Administrator';
+    }
 }
 
 // Logout
 document.getElementById('logoutBtn').addEventListener('click', function() {
-    localStorage.removeItem('isLoggedIn');
-    localStorage.removeItem('username');
+    try {
+        localStorage.removeItem('isLoggedIn');
+        localStorage.removeItem('username');
+    } catch (e) {}
+    sessionLoggedIn = false;
     location.reload();
 });
 
@@ -92,7 +114,6 @@ document.querySelectorAll('.nav-menu a').forEach(link => {
         if (page === 'categories') loadCategories();
         if (page === 'dashboard') loadDashboard();
         
-        // Close mobile menu if open
         document.getElementById('sidebar').classList.remove('active');
     });
 });
@@ -221,4 +242,159 @@ function loadCategories() {
                     <p>${count} dokumen</p>
                 </div>
                 <div class="doc-actions">
-                    <button class="btn-icon delete" onclick="deleteCategory(${cat
+                    <button class="btn-icon delete" onclick="deleteCategory(${cat.id})" title="Hapus">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// Update Category Selects
+function updateCategorySelects() {
+    const selects = [document.getElementById('filterCategory'), document.getElementById('docCategory')];
+    selects.forEach(select => {
+        if (!select) return;
+        const currentValue = select.value;
+        select.innerHTML = select.id === 'docCategory' ? '<option value="">Pilih Kategori</option>' : '<option value="">Semua Kategori</option>';
+        categories.forEach(cat => {
+            select.innerHTML += `<option value="${cat.id}">${cat.name}</option>`;
+        });
+        select.value = currentValue;
+    });
+}
+
+// Search & Filter
+document.getElementById('searchInput').addEventListener('input', loadDocuments);
+document.getElementById('filterCategory').addEventListener('change', loadDocuments);
+
+// Upload Modal
+document.getElementById('uploadBtn').addEventListener('click', function() {
+    document.getElementById('uploadModal').classList.add('active');
+});
+
+document.getElementById('closeModal').addEventListener('click', function() {
+    document.getElementById('uploadModal').classList.remove('active');
+});
+
+document.getElementById('fileUpload').addEventListener('click', function() {
+    document.getElementById('fileInput').click();
+});
+
+document.getElementById('fileInput').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        document.querySelector('#fileUpload p').textContent = file.name;
+    }
+});
+
+// Upload Form
+document.getElementById('uploadForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const file = document.getElementById('fileInput').files[0];
+    if (!file) {
+        showToast('Pilih file terlebih dahulu!', 'error');
+        return;
+    }
+
+    const title = document.getElementById('docTitle').value;
+    const description = document.getElementById('docDescription').value;
+    const categoryId = document.getElementById('docCategory').value;
+
+    const fileType = file.name.split('.').pop().toLowerCase();
+    
+    const newDoc = {
+        id: Date.now(),
+        title: title,
+        description: description,
+        fileName: file.name,
+        fileType: fileType,
+        size: file.size,
+        categoryId: categoryId,
+        uploadDate: new Date().toISOString()
+    };
+
+    documents.push(newDoc);
+    try { localStorage.setItem('documents', JSON.stringify(documents)); } catch(e){}
+
+    document.getElementById('uploadForm').reset();
+    document.querySelector('#fileUpload p').textContent = 'Klik untuk pilih file atau drag & drop';
+    document.getElementById('uploadModal').classList.remove('active');
+
+    loadDocuments();
+    loadDashboard();
+    showToast('Dokumen berhasil diupload!', 'success');
+});
+
+// Download Document
+function downloadDoc(id) {
+    const doc = documents.find(d => d.id === id);
+    if (doc) {
+        downloadCount++;
+        try { localStorage.setItem('downloadCount', downloadCount); } catch(e){}
+        loadDashboard();
+        showToast(`Mendownload: ${doc.fileName}`, 'success');
+    }
+}
+
+// Delete Document
+function deleteDoc(id) {
+    if (confirm('Yakin ingin menghapus dokumen ini?')) {
+        documents = documents.filter(d => d.id !== id);
+        try { localStorage.setItem('documents', JSON.stringify(documents)); } catch(e){}
+        loadDocuments();
+        loadDashboard();
+        showToast('Dokumen berhasil dihapus!', 'success');
+    }
+}
+
+// Add Category
+document.getElementById('addCategoryBtn').addEventListener('click', function() {
+    const name = prompt('Masukkan nama kategori:');
+    if (name && name.trim()) {
+        const newCategory = {
+            id: Date.now(),
+            name: name.trim()
+        };
+        categories.push(newCategory);
+        try { localStorage.setItem('categories', JSON.stringify(categories)); } catch(e){}
+        loadCategories();
+        updateCategorySelects();
+        showToast('Kategori berhasil ditambahkan!', 'success');
+    }
+});
+
+// Delete Category
+function deleteCategory(id) {
+    if (confirm('Yakin ingin menghapus kategori ini?')) {
+        categories = categories.filter(c => c.id !== id);
+        try { localStorage.setItem('categories', JSON.stringify(categories)); } catch(e){}
+        loadCategories();
+        updateCategorySelects();
+        showToast('Kategori berhasil dihapus!', 'success');
+    }
+}
+
+// Toast Notification
+function showToast(message, type) {
+    const toast = document.getElementById('toast');
+    const toastMessage = document.getElementById('toastMessage');
+    const icon = toast.querySelector('i');
+    
+    toastMessage.textContent = message;
+    toast.className = 'toast active ' + type;
+    
+    if (type === 'success') {
+        icon.className = 'fas fa-check-circle';
+        icon.style.color = '#11998e';
+    } else {
+        icon.className = 'fas fa-exclamation-circle';
+        icon.style.color = '#eb3349';
+    }
+
+    setTimeout(() => {
+        toast.classList.remove('active');
+    }, 3000);
+}
