@@ -19,19 +19,26 @@ document.addEventListener('DOMContentLoaded', function() {
     updateCategorySelects();
 });
 
-// Login
+// ==========================================
+// LOGIN (DIPERBAIKI: Menggunakan .trim() agar spasi tidak mengganggu)
+// ==========================================
 document.getElementById('loginForm').addEventListener('submit', function(e) {
     e.preventDefault();
-    const username = document.getElementById('loginUsername').value;
-    const password = document.getElementById('loginPassword').value;
+    
+    // .trim() menghapus spasi di awal/akhir, .toLowerCase() mengubah ke huruf kecil
+    const username = document.getElementById('loginUsername').value.trim().toLowerCase();
+    const password = document.getElementById('loginPassword').value.trim();
+
+    console.log("Mencoba login dengan:", { username, password }); // Untuk debugging di Console
 
     if (username === 'admin' && password === 'admin123') {
         localStorage.setItem('isLoggedIn', 'true');
-        localStorage.setItem('username', username);
+        localStorage.setItem('username', 'Administrator');
         showApp();
-        showToast('Login berhasil!', 'success');
+        showToast('Login berhasil! Selamat datang.', 'success');
     } else {
-        showToast('Username atau password salah!', 'error');
+        showToast('Username atau password salah! (Gunakan: admin / admin123)', 'error');
+        document.getElementById('loginPassword').value = ''; // Reset password field
     }
 });
 
@@ -42,10 +49,15 @@ function checkLogin() {
 }
 
 function showApp() {
-    document.getElementById('loginScreen').style.display = 'none';
-    document.getElementById('appContainer').classList.add('active');
+    const loginScreen = document.getElementById('loginScreen');
+    const appContainer = document.getElementById('appContainer');
+    
+    if (loginScreen) loginScreen.style.display = 'none';
+    if (appContainer) appContainer.classList.add('active');
+    
     const username = localStorage.getItem('username') || 'Administrator';
-    document.getElementById('userName').textContent = username;
+    const userNameEl = document.getElementById('userName');
+    if (userNameEl) userNameEl.textContent = username;
 }
 
 // Logout
@@ -65,7 +77,8 @@ document.querySelectorAll('.nav-menu a').forEach(link => {
         this.classList.add('active');
 
         document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
-        document.getElementById(page + 'Page').style.display = 'block';
+        const targetPage = document.getElementById(page + 'Page');
+        if (targetPage) targetPage.style.display = 'block';
 
         const titles = {
             'dashboard': 'Dashboard',
@@ -73,11 +86,14 @@ document.querySelectorAll('.nav-menu a').forEach(link => {
             'categories': 'Kategori',
             'settings': 'Pengaturan'
         };
-        document.getElementById('pageTitle').textContent = titles[page];
+        document.getElementById('pageTitle').textContent = titles[page] || 'Dashboard';
 
         if (page === 'documents') loadDocuments();
         if (page === 'categories') loadCategories();
         if (page === 'dashboard') loadDashboard();
+        
+        // Close mobile menu if open
+        document.getElementById('sidebar').classList.remove('active');
     });
 });
 
@@ -95,7 +111,6 @@ function loadDashboard() {
     const totalSize = documents.reduce((sum, doc) => sum + (doc.size || 0), 0);
     document.getElementById('totalStorage').textContent = (totalSize / 1024 / 1024).toFixed(2) + ' MB';
 
-    // Recent Documents
     const recentDocs = documents.slice(-5).reverse();
     const recentContainer = document.getElementById('recentDocs');
     
@@ -119,7 +134,7 @@ function loadDocuments() {
 
     let filtered = documents.filter(doc => {
         const matchSearch = doc.title.toLowerCase().includes(searchTerm) || 
-                           doc.description.toLowerCase().includes(searchTerm);
+                           (doc.description && doc.description.toLowerCase().includes(searchTerm));
         const matchCategory = !categoryFilter || doc.categoryId == categoryFilter;
         return matchSearch && matchCategory;
     });
@@ -144,9 +159,7 @@ function createDocumentItem(doc) {
     const category = categories.find(c => c.id == doc.categoryId);
     const iconClass = getFileIconClass(doc.fileType);
     const date = new Date(doc.uploadDate).toLocaleDateString('id-ID', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric'
+        day: 'numeric', month: 'short', year: 'numeric'
     });
 
     return `
@@ -208,162 +221,4 @@ function loadCategories() {
                     <p>${count} dokumen</p>
                 </div>
                 <div class="doc-actions">
-                    <button class="btn-icon delete" onclick="deleteCategory(${cat.id})" title="Hapus">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
-            </div>
-        `;
-    }).join('');
-}
-
-// Update Category Selects
-function updateCategorySelects() {
-    const selects = [document.getElementById('filterCategory'), document.getElementById('docCategory')];
-    selects.forEach(select => {
-        const currentValue = select.value;
-        select.innerHTML = '<option value="">Semua Kategori</option>';
-        if (select.id === 'docCategory') {
-            select.innerHTML = '<option value="">Pilih Kategori</option>';
-        }
-        categories.forEach(cat => {
-            select.innerHTML += `<option value="${cat.id}">${cat.name}</option>`;
-        });
-        select.value = currentValue;
-    });
-}
-
-// Search & Filter
-document.getElementById('searchInput').addEventListener('input', loadDocuments);
-document.getElementById('filterCategory').addEventListener('change', loadDocuments);
-
-// Upload Modal
-document.getElementById('uploadBtn').addEventListener('click', function() {
-    document.getElementById('uploadModal').classList.add('active');
-});
-
-document.getElementById('closeModal').addEventListener('click', function() {
-    document.getElementById('uploadModal').classList.remove('active');
-});
-
-document.getElementById('fileUpload').addEventListener('click', function() {
-    document.getElementById('fileInput').click();
-});
-
-document.getElementById('fileInput').addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    if (file) {
-        document.querySelector('#fileUpload p').textContent = file.name;
-    }
-});
-
-// Upload Form
-document.getElementById('uploadForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    const file = document.getElementById('fileInput').files[0];
-    if (!file) {
-        showToast('Pilih file terlebih dahulu!', 'error');
-        return;
-    }
-
-    const title = document.getElementById('docTitle').value;
-    const description = document.getElementById('docDescription').value;
-    const categoryId = document.getElementById('docCategory').value;
-
-    const fileType = file.name.split('.').pop().toLowerCase();
-    
-    const newDoc = {
-        id: Date.now(),
-        title: title,
-        description: description,
-        fileName: file.name,
-        fileType: fileType,
-        size: file.size,
-        categoryId: categoryId,
-        uploadDate: new Date().toISOString()
-    };
-
-    documents.push(newDoc);
-    localStorage.setItem('documents', JSON.stringify(documents));
-
-    // Reset form
-    document.getElementById('uploadForm').reset();
-    document.querySelector('#fileUpload p').textContent = 'Klik untuk pilih file atau drag & drop';
-    document.getElementById('uploadModal').classList.remove('active');
-
-    loadDocuments();
-    loadDashboard();
-    showToast('Dokumen berhasil diupload!', 'success');
-});
-
-// Download Document
-function downloadDoc(id) {
-    const doc = documents.find(d => d.id === id);
-    if (doc) {
-        downloadCount++;
-        localStorage.setItem('downloadCount', downloadCount);
-        loadDashboard();
-        showToast(`Downloading: ${doc.fileName}`, 'success');
-    }
-}
-
-// Delete Document
-function deleteDoc(id) {
-    if (confirm('Yakin ingin menghapus dokumen ini?')) {
-        documents = documents.filter(d => d.id !== id);
-        localStorage.setItem('documents', JSON.stringify(documents));
-        loadDocuments();
-        loadDashboard();
-        showToast('Dokumen berhasil dihapus!', 'success');
-    }
-}
-
-// Add Category
-document.getElementById('addCategoryBtn').addEventListener('click', function() {
-    const name = prompt('Masukkan nama kategori:');
-    if (name && name.trim()) {
-        const newCategory = {
-            id: Date.now(),
-            name: name.trim()
-        };
-        categories.push(newCategory);
-        localStorage.setItem('categories', JSON.stringify(categories));
-        loadCategories();
-        updateCategorySelects();
-        showToast('Kategori berhasil ditambahkan!', 'success');
-    }
-});
-
-// Delete Category
-function deleteCategory(id) {
-    if (confirm('Yakin ingin menghapus kategori ini?')) {
-        categories = categories.filter(c => c.id !== id);
-        localStorage.setItem('categories', JSON.stringify(categories));
-        loadCategories();
-        updateCategorySelects();
-        showToast('Kategori berhasil dihapus!', 'success');
-    }
-}
-
-// Toast Notification
-function showToast(message, type) {
-    const toast = document.getElementById('toast');
-    const toastMessage = document.getElementById('toastMessage');
-    const icon = toast.querySelector('i');
-    
-    toastMessage.textContent = message;
-    toast.className = 'toast active ' + type;
-    
-    if (type === 'success') {
-        icon.className = 'fas fa-check-circle';
-        icon.style.color = '#11998e';
-    } else {
-        icon.className = 'fas fa-exclamation-circle';
-        icon.style.color = '#eb3349';
-    }
-
-    setTimeout(() => {
-        toast.classList.remove('active');
-    }, 3000);
-}
+                    <button class="btn-icon delete" onclick="deleteCategory(${cat
