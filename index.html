@@ -1,1 +1,195 @@
-<!doctype html><html lang="id"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Kasir Sederhana</title><link rel="stylesheet" href="style.css"></head><body><main class="container"><section class="card"><b class="badge">Tugas Pemrograman</b><h1>🛒 Kasir Sederhana</h1><p>Masukkan barang, jumlah, dan harga untuk menghitung pembayaran.</p><form id="kasir"><label>Nama Barang</label><input id="barang" required placeholder="Contoh: Buku"><div class="row"><div><label>Jumlah</label><input id="jumlah" type="number" min="1" required placeholder="1"></div><div><label>Harga Satuan</label><input id="harga" type="number" min="0" required placeholder="10000"></div></div><button>Hitung Total</button></form><div id="hasil" class="hasil">Hasil transaksi muncul di sini.</div></section><section class="card"><h2>Flowchart</h2><div class="flowchart"><div class="flow oval">MULAI</div><div class="arrow">↓</div><div class="flow">INPUT<br><small>barang, jumlah, harga</small></div><div class="arrow">↓</div><div class="flow">PROSES<br><small>subtotal = jumlah × harga</small></div><div class="arrow">↓</div><div class="decision">TOTAL ≥ 100.000?</div><div class="branches"><div><b>YA</b><div class="arrow">↓</div><div class="flow">OUTPUT<br><small>Diskon 10%</small></div></div><div><b>TIDAK</b><div class="arrow">↓</div><div class="flow fail">OUTPUT<br><small>Tanpa diskon</small></div></div></div><div class="arrow">↓</div><div class="flow">PROSES<br><small>total akhir = subtotal − diskon</small></div><div class="arrow">↓</div><div class="flow">OUTPUT<br><small>Total pembayaran</small></div><div class="arrow">↓</div><div class="flow oval">SELESAI</div></div></section><footer>HTML + CSS + JavaScript</footer></main><script src="script.js"></script></body></html>
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-Arsip - Sistem Arsip Digital</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Login Screen -->
+    <div class="login-container" id="loginScreen">
+        <div class="login-box">
+            <h1><i class="fas fa-archive"></i> E-Arsip</h1>
+            <p>Sistem Arsip Digital</p>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="loginUsername" placeholder="Masukkan username" required>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="loginPassword" placeholder="Masukkan password" required>
+                </div>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-sign-in-alt"></i> Login
+                </button>
+            </form>
+            <p style="margin-top: 20px; font-size: 12px; text-align: center;">
+                Demo: admin / admin123
+            </p>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div class="app-container" id="appContainer">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h2><i class="fas fa-archive"></i> E-Arsip</h2>
+                <p>Sistem Arsip Digital</p>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="#" class="active" data-page="dashboard"><i class="fas fa-home"></i> Dashboard</a></li>
+                <li><a href="#" data-page="documents"><i class="fas fa-file-alt"></i> Dokumen</a></li>
+                <li><a href="#" data-page="categories"><i class="fas fa-folder"></i> Kategori</a></li>
+                <li><a href="#" data-page="settings"><i class="fas fa-cog"></i> Pengaturan</a></li>
+            </ul>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <div class="header">
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <button class="mobile-menu-btn" id="mobileMenuBtn">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <h1 id="pageTitle">Dashboard</h1>
+                </div>
+                <div class="user-info">
+                    <span id="userName">Administrator</span>
+                    <button class="btn-logout" id="logoutBtn">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </button>
+                </div>
+            </div>
+
+            <!-- Dashboard Page -->
+            <div id="dashboardPage" class="page active">
+                <!-- Stats -->
+                <div class="stats-grid">
+                    <div class="stat-card blue">
+                        <div class="icon"><i class="fas fa-file-alt"></i></div>
+                        <h3>Total Dokumen</h3>
+                        <div class="number" id="totalDocs">0</div>
+                    </div>
+                    <div class="stat-card green">
+                        <div class="icon"><i class="fas fa-folder"></i></div>
+                        <h3>Kategori</h3>
+                        <div class="number" id="totalCategories">0</div>
+                    </div>
+                    <div class="stat-card orange">
+                        <div class="icon"><i class="fas fa-download"></i></div>
+                        <h3>Total Download</h3>
+                        <div class="number" id="totalDownloads">0</div>
+                    </div>
+                    <div class="stat-card purple">
+                        <div class="icon"><i class="fas fa-hdd"></i></div>
+                        <h3>Penyimpanan</h3>
+                        <div class="number" id="totalStorage">0 MB</div>
+                    </div>
+                </div>
+
+                <!-- Recent Documents -->
+                <div class="section-card">
+                    <div class="section-header">
+                        <h2>Dokumen Terbaru</h2>
+                    </div>
+                    <div class="document-list" id="recentDocs"></div>
+                </div>
+            </div>
+
+            <!-- Documents Page -->
+            <div id="documentsPage" class="page" style="display: none;">
+                <div class="section-card">
+                    <div class="section-header">
+                        <h2>Semua Dokumen</h2>
+                        <button class="btn-upload" id="uploadBtn">
+                            <i class="fas fa-upload"></i> Upload Dokumen
+                        </button>
+                    </div>
+
+                    <!-- Search & Filter -->
+                    <div class="search-filter">
+                        <div class="search-box">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="searchInput" placeholder="Cari dokumen...">
+                        </div>
+                        <select class="filter-select" id="filterCategory">
+                            <option value="">Semua Kategori</option>
+                        </select>
+                    </div>
+
+                    <!-- Document List -->
+                    <div class="document-list" id="allDocs"></div>
+                </div>
+            </div>
+
+            <!-- Categories Page -->
+            <div id="categoriesPage" class="page" style="display: none;">
+                <div class="section-card">
+                    <div class="section-header">
+                        <h2>Kategori Dokumen</h2>
+                        <button class="btn-upload" id="addCategoryBtn">
+                            <i class="fas fa-plus"></i> Tambah Kategori
+                        </button>
+                    </div>
+                    <div class="document-list" id="categoryList"></div>
+                </div>
+            </div>
+
+            <!-- Settings Page -->
+            <div id="settingsPage" class="page" style="display: none;">
+                <div class="section-card">
+                    <h2>Pengaturan</h2>
+                    <p style="color: #666; margin-top: 10px;">Fitur pengaturan akan segera tersedia.</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Upload Modal -->
+    <div class="modal" id="uploadModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Upload Dokumen</h3>
+                <button class="btn-close" id="closeModal">&times;</button>
+            </div>
+            <form id="uploadForm">
+                <div class="form-group">
+                    <label>Judul Dokumen</label>
+                    <input type="text" id="docTitle" placeholder="Masukkan judul" required>
+                </div>
+                <div class="form-group">
+                    <label>Deskripsi</label>
+                    <input type="text" id="docDescription" placeholder="Deskripsi singkat">
+                </div>
+                <div class="form-group">
+                    <label>Kategori</label>
+                    <select id="docCategory" class="filter-select" required>
+                        <option value="">Pilih Kategori</option>
+                    </select>
+                </div>
+                <div class="file-upload" id="fileUpload">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <p>Klik untuk pilih file atau drag & drop</p>
+                    <input type="file" id="fileInput" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.zip,.rar">
+                </div>
+                <button type="submit" class="btn btn-success">
+                    <i class="fas fa-upload"></i> Upload
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast">
+        <i class="fas fa-check-circle"></i>
+        <span id="toastMessage">Success!</span>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
